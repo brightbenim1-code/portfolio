@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Pay Fees - BENIM</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>:root{--blue:#0756a6;--blue-dark:#063b75;--green:#16a34a;--bg:#f4f8fc;--border:#dce6f0;--muted:#64748b}*{margin:0;padding:0;box-sizing:border-box;font-family:Inter,sans-serif}body{background:var(--bg)}.topbar{background:linear-gradient(135deg,var(--blue-dark),var(--blue));color:white;padding:15px 20px;border-bottom:4px solid var(--green)}.container{max-width:560px;margin:24px auto;padding:0 16px}.card{background:white;border:1px solid var(--border);border-radius:18px;padding:22px}.input{width:100%;padding:13px;border:1.5px solid var(--border);border-radius:11px;margin-top:8px}.btn{padding:13px;border:none;border-radius:11px;font-weight:800;cursor:pointer;width:100%}.btn-primary{background:var(--blue);color:white}.btn-yellow{background:#f9b233;color:#10233f}.pay-opt{border:1.5px solid var(--border);border-radius:12px;padding:12px;text-align:center;font-weight:700;cursor:pointer}.pay-opt.active{border-color:var(--blue);background:#eaf3ff}</style>
+</head>
+<body>
+<div class="topbar"><b>BENIM PREPARATORY ACADEMY</b> - Pay Online</div>
+<div class="container">
+<div class="card" id="lookupCard"><h2>Check Your Fees</h2><p style="font-size:13px;color:var(--muted);margin:8px 0">Enter Student ID or use personal link</p><input class="input" id="studentID" placeholder="BPA/001"><button class="btn btn-primary" style="margin-top:12px" onclick="lookup()">View Balance</button><div id="error" style="color:red;font-size:12px;margin-top:8px"></div></div>
+<div id="studentCard" style="display:none"></div><div id="receiptArea"></div>
+</div>
+<script>
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let current=null; let selectedMethod="MTN MoMo";
+function getIdFromUrl(){ return new URLSearchParams(window.location.search).get('id'); }
+async function lookup(idParam){
+  const id=(idParam||document.getElementById('studentID').value.trim().toUpperCase()); if(!id){document.getElementById('error').innerText="Enter ID"; return;}
+  const { data, error } = await supabaseClient.from('students').select('*').eq('id', id).single();
+  if(error||!data){ document.getElementById('error').innerText="ID not found: "+id; return; }
+  current=data; document.getElementById('lookupCard').style.display='none';
+  document.getElementById('studentCard').style.display='block';
+  document.getElementById('studentCard').innerHTML=`<div class="card"><div style="font-weight:800;font-size:20px">${data.name}</div><div style="font-size:13px;color:var(--muted)">${data.id} • ${data.class}</div><div style="margin-top:14px;background:#f8fafc;border-radius:12px;padding:12px"><div style="display:flex;justify-content:space-between"><span>Total</span><b>GHS ${Number(data.total).toFixed(2)}</b></div><div style="display:flex;justify-content:space-between"><span>Paid</span><b style="color:var(--green)">GHS ${Number(data.paid).toFixed(2)}</b></div><div style="display:flex;justify-content:space-between;font-weight:800;font-size:18px;margin-top:8px"><span>Due</span><b style="color:red">GHS ${Number(data.balance).toFixed(2)}</b></div></div><div id="paySection" style="${Number(data.balance)==0?'display:none':''}"><label style="font-size:13px;font-weight:700;margin-top:14px;display:block">Amount to Pay</label><input class="input" type="number" id="payAmount" value="${Number(data.balance).toFixed(2)}"><label style="margin-top:12px;display:block;font-size:13px;font-weight:700">Method</label><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px"><div class="pay-opt active" onclick="pick(this,'MTN MoMo')">MTN MoMo</div><div class="pay-opt" onclick="pick(this,'Telecel Cash')">Telecel</div><div class="pay-opt" onclick="pick(this,'Card')">Card</div></div><label style="margin-top:12px;display:block;font-size:13px;font-weight:700">Email for Receipt</label><input class="input" id="receiptEmail" value="${data.email}"><button class="btn btn-yellow" style="margin-top:14px" onclick="payNow()">Pay Now</button></div><div style="${Number(data.balance)==0?'':'display:none'};text-align:center;padding:16px;background:#dcfce7;border-radius:12px;margin-top:14px">✓ Fully Paid</div></div>`;
+}
+function pick(el,m){ document.querySelectorAll('.pay-opt').forEach(o=>o.classList.remove('active')); el.classList.add('active'); selectedMethod=m; }
+async function payNow(){
+  const amt=Number(document.getElementById('payAmount').value); const email=document.getElementById('receiptEmail').value;
+  if(amt>Number(current.balance)){ alert("Exceeds balance"); return; }
+  const PAYSTACK_KEY="pk_test_xxxxxxxxxxxxxxxxxxxxxxx";
+  if(PAYSTACK_KEY.includes("xxxx")){ doSuccess(amt,"TEST-"+Date.now(),email); return; }
+  let handler=PaystackPop.setup({ key:PAYSTACK_KEY, email, amount:amt*100, currency:"GHS", ref:"BPA_"+Date.now(), callback:function(res){ doSuccess(amt,res.reference,email); }, onClose:function(){ alert("Closed"); } }); handler.openIframe();
+}
+async function doSuccess(amt,ref,email){
+  const newPaid=Number(current.paid)+amt; const newBal=Number(current.total)-newPaid;
+  await supabaseClient.from('students').update({ paid:newPaid, balance:newBal }).eq('id', current.id);
+  await supabaseClient.from('payments').insert({ student_id:current.id, amount:amt, method:selectedMethod, reference:ref });
+  document.getElementById('receiptArea').innerHTML=`<div class="card" style="border:2px dashed var(--blue);margin-top:16px;text-align:center"><h3 style="color:var(--green)">Payment Successful!</h3><p style="margin-top:8px">GHS ${amt.toFixed(2)} paid for ${current.name}</p><p style="font-size:12px;color:var(--muted)">Ref: ${ref}</p><button class="btn btn-primary" style="margin-top:12px" onclick="window.print()">Print Receipt</button></div>`;
+  lookup(current.id);
+}
+window.addEventListener('DOMContentLoaded',()=>{ const id=getIdFromUrl(); if(id){ document.getElementById('studentID').value=id; lookup(id); } });
+</script>
+</body>
+</html>

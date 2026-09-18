@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BENIM PREPARATORY - Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--blue:#0756a6;--blue-dark:#063b75;--green:#16a34a;--bg:#f4f8fc;--border:#dce6f0;--text:#10233f;--muted:#64748b;--danger:#dc2626}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Inter,sans-serif}body{background:var(--bg)}
+#loginGate{position:fixed;inset:0;background:linear-gradient(135deg,#051a35,#0756a6);z-index:9999;display:grid;place-items:center;padding:20px}
+.login-box{background:white;width:100%;max-width:400px;border-radius:20px;padding:30px;text-align:center}
+.topbar{background:linear-gradient(135deg,var(--blue-dark),var(--blue));color:white;padding:15px 25px;display:flex;justify-content:space-between;align-items:center;border-bottom:4px solid var(--green)}
+.container{max-width:1100px;margin:30px auto;padding:0 16px}.card{background:white;border:1px solid var(--border);border-radius:18px;padding:25px;box-shadow:0 5px 18px rgba(7,86,166,.06);margin-top:22px}
+.input,select{width:100%;padding:13px;border:1.5px solid var(--border);border-radius:11px;margin-top:6px}
+.btn{padding:12px 18px;border:none;border-radius:11px;font-weight:700;cursor:pointer}.btn-primary{background:var(--blue);color:white}.btn-green{background:var(--green);color:white}.btn-danger{background:#fee2e2;color:#991b1b}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}th,td{padding:12px 9px;border-bottom:1px solid var(--border);text-align:left}th{background:var(--blue);color:white}
+.badge{padding:5px 10px;border-radius:999px;font-size:11px;font-weight:800}.badge-paid{background:#dcfce7;color:#166534}.badge-balance{background:#fff7ed;color:#9a3412}.badge-unpaid{background:#fee2e2;color:#991b1b}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}@media(max-width:800px){.stats{grid-template-columns:1fr 1fr}}
+.stat{background:white;border:1px solid var(--border);border-radius:15px;padding:18px}.stat-title{font-size:12px;color:var(--muted)}.stat-value{font-size:22px;font-weight:800;color:var(--blue);margin-top:5px}
+.modal{display:none;position:fixed;inset:0;background:rgba(3,25,50,.65);z-index:1000;padding:20px;overflow-y:auto}.modal-content{background:white;max-width:650px;margin:40px auto;border-radius:18px;padding:25px}
+</style>
+</head>
+<body>
+<div id="loginGate"><div class="login-box"><div style="width:60px;height:60px;background:var(--blue);color:white;border-radius:16px;display:grid;place-items:center;font-weight:800;font-size:24px;margin:0 auto 16px auto">B</div><h2>Admin Login</h2><p style="font-size:13px;color:var(--muted);margin:8px 0 16px 0">BENIM PREPARATORY</p><input class="input" id="loginUser" placeholder="Username" value="admin"><input class="input" id="loginPass" type="password" placeholder="Password" style="margin-top:10px"><button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="checkLogin()">Login</button><div id="loginError" style="color:#dc2626;font-size:12px;margin-top:10px"></div><p style="font-size:11px;color:#94a3b8;margin-top:12px">admin / Benim@2025</p></div></div>
+<div class="topbar"><div style="font-weight:800">BENIM PREPARATORY ACADEMY - ONLINE</div><div><span style="font-size:11px">🟢 Live DB</span> <button onclick="logout()" style="margin-left:10px;background:#ffffff22;border:1px solid #ffffff44;color:white;padding:6px 12px;border-radius:20px;font-size:11px;cursor:pointer">Logout</button></div></div>
+<div class="container">
+<div class="stats"><div class="stat"><div class="stat-title">TOTAL STUDENTS</div><div class="stat-value" id="totalStudents">0</div></div><div class="stat"><div class="stat-title">TOTAL FEES</div><div class="stat-value" id="totalFees">GHS 0</div></div><div class="stat"><div class="stat-title">COLLECTED</div><div class="stat-value" id="totalPaid" style="color:var(--green)">GHS 0</div></div><div class="stat"><div class="stat-title">OUTSTANDING</div><div class="stat-value" id="totalBalance">GHS 0</div></div></div>
+<div class="card"><h3>Register New Student</h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px"><div><label>Full Name</label><input class="input" id="studentName"></div><div><label>Class</label><select id="studentClass"><option value="">Select</option><option>Nursery 1</option><option>Nursery 2</option><option>KG 1</option><option>KG 2</option><option>Basic 1</option><option>Basic 2</option><option>Basic 3</option><option>Basic 4</option><option>Basic 5</option><option>Basic 6</option><option>JHS 1</option><option>JHS 2</option><option>JHS 3</option></select></div><div><label>Parent Name</label><input class="input" id="parentName"></div><div><label>Parent Email</label><input class="input" id="parentEmail"></div><div><label>Phone</label><input class="input" id="parentPhone"></div><div><label>Academic Year</label><select id="academicYear"><option>2025/2026</option><option selected>2026/2027</option></select></div><div><label>Total Fees GHS</label><input class="input" type="number" id="totalFeesInput"></div><div><label>Initial Paid GHS</label><input class="input" type="number" id="initialPaid" value="0"></div></div><button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="registerStudent()">Register Student</button><div id="error" style="color:#dc2626;font-size:12px;margin-top:8px"></div></div>
+<div class="card"><h3>Student Records - Online</h3><input class="input" id="search" placeholder="Search by ID, name..." oninput="displayStudents()"><div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Student</th><th>Class</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th></tr></thead><tbody id="studentTable"></tbody></table></div></div>
+</div>
+<div class="modal" id="paymentModal"><div class="modal-content"><h3>Add Payment</h3><div id="paymentStudentName" style="font-size:13px;color:var(--muted)"></div><input type="hidden" id="paymentStudentID"><label style="margin-top:12px;display:block">Amount GHS</label><input class="input" type="number" id="paymentAmount"><label style="margin-top:10px;display:block">Method</label><select id="paymentMethod"><option>MTN MoMo</option><option>Telecel Cash</option><option>Cash</option><option>Card</option></select><label style="margin-top:10px;display:block">Reference</label><input class="input" id="paymentReference"><button class="btn btn-green" style="width:100%;margin-top:14px" onclick="savePayment()">Save Payment</button><button class="btn" style="width:100%;margin-top:8px;background:#f1f5f9" onclick="closePaymentModal()">Cancel</button></div></div>
+
+<script>
+// === PUT YOUR SUPABASE KEYS HERE ===
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const ADMIN_USER = "admin"; const ADMIN_PASS = "Benim@2025";
+function checkLogin(){ if(document.getElementById('loginUser').value===ADMIN_USER && document.getElementById('loginPass').value===ADMIN_PASS){ localStorage.setItem("BENIM_ADMIN_AUTH","yes"); document.getElementById('loginGate').style.display="none"; loadStudents(); } else { document.getElementById('loginError').innerText="Invalid login"; } }
+function logout(){ localStorage.removeItem("BENIM_ADMIN_AUTH"); location.reload(); }
+if(localStorage.getItem("BENIM_ADMIN_AUTH")==="yes"){ document.getElementById('loginGate').style.display="none"; }
+
+let students = [];
+async function loadStudents(){
+  const { data, error } = await supabaseClient.from('students').select('*').order('id');
+  if(error){ console.error(error); return; }
+  students = data; displayStudents(); updateStats();
+}
+async function registerStudent(){
+  const name=document.getElementById('studentName').value.trim();
+  const sClass=document.getElementById('studentClass').value;
+  const parent=document.getElementById('parentName').value.trim();
+  const email=document.getElementById('parentEmail').value.trim();
+  const phone=document.getElementById('parentPhone').value.trim();
+  const year=document.getElementById('academicYear').value;
+  const total=Number(document.getElementById('totalFeesInput').value);
+  const paid=Number(document.getElementById('initialPaid').value)||0;
+  if(!name||!sClass||!parent||!email||!total){ document.getElementById('error').innerText="Fill all required fields"; return; }
+  // generate ID
+  let highest=0; students.forEach(s=>{ const n=parseInt(s.id.split('/')[1]); if(!isNaN(n)&&n>highest) highest=n; });
+  const newId = "BPA/"+String(highest+1).padStart(3,"0");
+  const { error } = await supabaseClient.from('students').insert({ id:newId, name, class:sClass, parent, email, phone, academic_year:year, total, paid, balance:total-paid });
+  if(error){ document.getElementById('error').innerText=error.message; return; }
+  if(paid>0){ await supabaseClient.from('payments').insert({ student_id:newId, amount:paid, method:"Initial", reference:"REG-"+Date.now() }); }
+  document.getElementById('studentName').value=""; document.getElementById('totalFeesInput').value=""; document.getElementById('initialPaid').value="0";
+  alert("Registered! ID: "+newId+" - Pay Link: pay.html?id="+newId);
+  loadStudents();
+}
+function displayStudents(){
+  const table=document.getElementById('studentTable');
+  const search=document.getElementById('search').value.toLowerCase();
+  const filtered=students.filter(s=> s.id.toLowerCase().includes(search) || s.name.toLowerCase().includes(search));
+  let rows=""; filtered.forEach(s=>{ let badge=s.balance==0?"badge-paid":s.paid>0?"badge-balance":"badge-unpaid"; let st=s.balance==0?"PAID":s.paid>0?"PARTIAL":"UNPAID"; rows+=`<tr><td><b>${s.id}</b></td><td><b>${s.name}</b><br><small>${s.email}</small></td><td>${s.class}</td><td style="color:var(--green)">GHS ${Number(s.paid).toFixed(2)}</td><td style="color:#dc2626">GHS ${Number(s.balance).toFixed(2)}</td><td><span class="badge ${badge}">${st}</span></td><td><button class="btn btn-green" style="padding:6px 8px;font-size:11px" onclick="openPayment('${s.id}')">+ Pay</button><button class="btn" style="padding:6px 8px;font-size:11px;margin-top:4px;background:#0f172a;color:white" onclick="copyPayLink('${s.id}')">🔗 Link</button></td></tr>`; });
+  table.innerHTML=rows||`<tr><td colspan="7" style="text-align:center;padding:20px">No students</td></tr>`;
+}
+function updateStats(){ let tf=0,tp=0,tb=0; students.forEach(s=>{ tf+=Number(s.total); tp+=Number(s.paid); tb+=Number(s.balance); }); document.getElementById('totalStudents').innerText=students.length; document.getElementById('totalFees').innerText="GHS "+tf.toFixed(2); document.getElementById('totalPaid').innerText="GHS "+tp.toFixed(2); document.getElementById('totalBalance').innerText="GHS "+tb.toFixed(2); }
+function openPayment(id){ const s=students.find(x=>x.id===id); document.getElementById('paymentStudentID').value=id; document.getElementById('paymentStudentName').innerText=s.name+" • "+s.id+" • Balance GHS "+s.balance; document.getElementById('paymentModal').style.display="block"; }
+function closePaymentModal(){ document.getElementById('paymentModal').style.display="none"; }
+async function savePayment(){
+  const id=document.getElementById('paymentStudentID').value; const amount=Number(document.getElementById('paymentAmount').value); const method=document.getElementById('paymentMethod').value; let ref=document.getElementById('paymentReference').value||"BPA-PAY-"+Date.now();
+  const s=students.find(x=>x.id===id); if(amount>Number(s.balance)){ alert("Exceeds balance"); return; }
+  const newPaid=Number(s.paid)+amount; const newBal=Number(s.total)-newPaid;
+  const { error:err1 } = await supabaseClient.from('students').update({ paid:newPaid, balance:newBal }).eq('id', id);
+  if(err1){ alert(err1.message); return; }
+  await supabaseClient.from('payments').insert({ student_id:id, amount, method, reference:ref });
+  closePaymentModal(); loadStudents(); alert("Payment saved!");
+}
+function copyPayLink(id){ const base=window.location.href.split('?')[0].replace('admin.html','').replace('index.html',''); const link=base+'pay.html?id='+id; navigator.clipboard.writeText(link).then(()=>alert("Copied: "+link)); }
+loadStudents();
+</script>
+</body>
+</html>
